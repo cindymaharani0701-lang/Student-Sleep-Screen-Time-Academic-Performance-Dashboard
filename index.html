@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Sleep, Screen Time & Academic Performance Dashboard</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Tailwind config: extend with custom color palette -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            academic: { DEFAULT: '#3b82f6', light: '#eff6ff', dark: '#1d4ed8' },
+            sleep:    { DEFAULT: '#8b5cf6', light: '#f5f3ff', dark: '#6d28d9' },
+            screen:   { DEFAULT: '#f97316', light: '#fff7ed', dark: '#c2410c' },
+            life:     { DEFAULT: '#22c55e', light: '#f0fdf4', dark: '#15803d' },
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased" style="overflow-x:hidden">
+
+  <!-- ═══════════════════════════════════════════════
+       MOBILE SIDEBAR OVERLAY
+  ════════════════════════════════════════════════ -->
+  <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE SHELL — flex row on desktop
+  ════════════════════════════════════════════════ -->
+  <div class="flex min-h-screen">
+
+  <!-- ═══════════════════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════════════════════ -->
+  <aside id="sidebar"
+    class="fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-40
+           transform -translate-x-full transition-transform duration-300 ease-in-out
+           lg:translate-x-0 lg:static lg:shrink-0 lg:h-auto lg:self-stretch overflow-y-auto">
+
+    <!-- Logo / Brand -->
+    <div class="px-5 py-5 border-b border-gray-100 flex items-center gap-3">
+      <span class="text-2xl">🎓</span>
+      <div>
+        <p class="font-semibold text-sm text-gray-900 leading-tight">Student Insights</p>
+        <p class="text-xs text-gray-500">Sleep · Screen · Academics</p>
+      </div>
+      <!-- Close btn (mobile) -->
+      <button onclick="toggleSidebar()" class="ml-auto lg:hidden p-1 rounded text-gray-400 hover:text-gray-700">✕</button>
+    </div>
+
+    <!-- Nav sections -->
+    <nav class="px-3 py-4 space-y-1 text-sm">
+      <p class="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Dashboard</p>
+      <a href="#section-overview"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700"><span>📊</span> Overview & KPIs</a>
+      <a href="#section-academic"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700"><span>📚</span> Academic Performance</a>
+      <a href="#section-sleep"      class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-700"><span>🌙</span> Sleep Analysis</a>
+      <a href="#section-screen"     class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-orange-50 hover:text-orange-700"><span>📱</span> Screen Time</a>
+      <a href="#section-lifestyle"  class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700"><span>🏃</span> Lifestyle & Wellbeing</a>
+      <a href="#section-demo"       class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100"><span>👥</span> Demographics</a>
+    </nav>
+
+    <!-- Filter Panel -->
+    <div class="px-3 pb-6 pt-2 border-t border-gray-100 mt-2">
+      <div class="flex items-center justify-between px-2 mb-3">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</p>
+        <button id="resetBtn" onclick="resetFilters()"
+          class="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-0.5 rounded hover:bg-blue-50 transition">
+          Reset
+        </button>
+      </div>
+
+      <div class="space-y-3" id="filterContainer">
+        <!-- Filters injected dynamically by JS -->
+      </div>
+
+      <!-- Active filter count -->
+      <p id="filterStatus" class="mt-3 px-2 text-xs text-gray-400"></p>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════ -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- ── HEADER ── -->
+    <header class="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center gap-4 shadow-sm">
+      <!-- Hamburger (mobile) -->
+      <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+
+      <div class="flex-1 min-w-0">
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 truncate">
+          Student Sleep, Screen Time &amp; Academic Performance
+        </h1>
+        <p class="text-xs text-gray-500 hidden sm:block">Interactive analytics dashboard · 500 students</p>
+      </div>
+
+      <!-- Dataset badge -->
+      <span id="dataCount" class="shrink-0 text-xs bg-blue-50 text-blue-700 font-medium px-2.5 py-1 rounded-full border border-blue-100">
+        Loading…
+      </span>
+
+      <!-- Theme toggle -->
+      <button id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+        <!-- Sun icon (shown in dark mode) -->
+        <svg id="iconSun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <!-- Moon icon (shown in light mode) -->
+        <svg id="iconMoon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- ── MAIN SCROLL AREA ── -->
+    <main class="flex-1 px-4 sm:px-6 py-6 space-y-10 max-w-screen-2xl mx-auto w-full">
+
+      <!-- Empty state -->
+      <div id="emptyState" class="hidden text-center py-20">
+        <p class="text-4xl mb-3">🔍</p>
+        <p class="text-lg font-semibold text-gray-600">No students match the current filters</p>
+        <p class="text-sm text-gray-400 mt-1">Try adjusting or resetting your filter selections.</p>
+        <button onclick="resetFilters()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">Reset Filters</button>
+      </div>
+
+      <!-- ─────────────── OVERVIEW & KPIs ─────────────── -->
+      <section id="section-overview">
+        <h2 class="section-title">📊 Overview & Key Metrics</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4" id="kpiGrid">
+          <!-- KPI cards injected by JS -->
+        </div>
+      </section>
+
+      <!-- ─────────────── ACADEMIC PERFORMANCE ─────────────── -->
+      <section id="section-academic">
+        <h2 class="section-title academic">📚 Academic Performance</h2>
+        <div class="chart-grid">
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">CGPA Distribution</h3>
+            <div class="chart-wrap"><canvas id="cgpaDistChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Avg CGPA by Year of Study</h3>
+            <div class="chart-wrap"><canvas id="cgpaByYearChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Avg CGPA by Major</h3>
+            <div class="chart-wrap"><canvas id="cgpaByMajorChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Study Hours vs CGPA</h3>
+            <div class="chart-wrap"><canvas id="studyVsCgpaChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Class Attendance vs CGPA</h3>
+            <div class="chart-wrap"><canvas id="attendanceVsCgpaChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">CGPA by Chronotype</h3>
+            <div class="chart-wrap"><canvas id="cgpaByChronotypeChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── SLEEP ANALYSIS ─────────────── -->
+      <section id="section-sleep">
+        <h2 class="section-title sleep">🌙 Sleep Analysis</h2>
+        <div class="chart-grid">
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Avg Sleep Duration by Year</h3>
+            <div class="chart-wrap"><canvas id="sleepByYearChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Sleep Quality Distribution</h3>
+            <div class="chart-wrap"><canvas id="sleepQualityDistChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Bedtime Distribution</h3>
+            <div class="chart-wrap"><canvas id="bedtimeDistChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Sleep Duration vs CGPA</h3>
+            <div class="chart-wrap"><canvas id="sleepVsCgpaChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Weekend Sleep Delta Distribution</h3>
+            <div class="chart-wrap"><canvas id="weekendDeltaChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Caffeine Consumption vs Sleep</h3>
+            <div class="chart-wrap"><canvas id="caffeineVsSleepChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── SCREEN TIME ─────────────── -->
+      <section id="section-screen">
+        <h2 class="section-title screen">📱 Screen Time Analysis</h2>
+        <div class="chart-grid">
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Avg Screen Time by Primary Device</h3>
+            <div class="chart-wrap"><canvas id="screenByDeviceChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Pre-Sleep Screen Time vs Sleep Quality</h3>
+            <div class="chart-wrap"><canvas id="preSleepVsQualityChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Screen Time vs CGPA</h3>
+            <div class="chart-wrap"><canvas id="screenVsCgpaChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Device-Free Before Bed</h3>
+            <div class="chart-wrap"><canvas id="deviceFreeChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Avg Screen Time by Major</h3>
+            <div class="chart-wrap"><canvas id="screenByMajorChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Avg Daily Screen Time Distribution</h3>
+            <div class="chart-wrap"><canvas id="screenDistChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── LIFESTYLE ─────────────── -->
+      <section id="section-lifestyle">
+        <h2 class="section-title life">🏃 Lifestyle & Wellbeing</h2>
+        <div class="chart-grid">
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Exercise Frequency vs Energy Level</h3>
+            <div class="chart-wrap"><canvas id="exerciseVsEnergyChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Concentration Difficulty Distribution</h3>
+            <div class="chart-wrap"><canvas id="concentrationChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Part-Time Job Breakdown</h3>
+            <div class="chart-wrap"><canvas id="partTimeChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── DEMOGRAPHICS ─────────────── -->
+      <section id="section-demo">
+        <h2 class="section-title">👥 Student Demographics</h2>
+        <div class="chart-grid">
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Gender Distribution</h3>
+            <div class="chart-wrap"><canvas id="genderChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Residence Type</h3>
+            <div class="chart-wrap"><canvas id="residenceChart"></canvas></div>
+          </div>
+          <div class="chart-card col-span-1">
+            <h3 class="chart-title">Year of Study Distribution</h3>
+            <div class="chart-wrap"><canvas id="yearChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── FOOTER ── -->
+    <footer class="border-t border-gray-200 px-6 py-4 text-center text-xs text-gray-400 bg-white">
+      Student Sleep, Screen Time &amp; Academic Performance Dashboard · Data: 500 students · Built with Chart.js &amp; Tailwind CSS
+    </footer>
+  </div><!-- end main column -->
+  </div><!-- end page shell -->
+
+  <!-- Main script -->
+  <script src="script.js"></script>
+</body>
+</html>
